@@ -10,47 +10,51 @@ class EKF():
         self.R_lidar = np.eye((3,3),dtype=np.float)
 
 
-    def predict(self,delta_t,state_estimate_t_minus_1,P_t_minus_1,theta,z_t_observation_vector): 
+    def predict(self,delta_t): 
 
         # Inputs
+        x_t = 0
+        x_t_dot = 0
+        y_t = 0
+        y_t_dot = 0
+        theta_t = 0
+        theta_t_dot = 0
+        P_t = 0
 
-        control_vector_t_minus_1 = np.array([5,0.0])  #control constant velocity in x direction (5m/s)
+        x_t_plus_1 = x_t + x_t_dot @ delta_t
+        y_t_plus_1 = y_t + y_t_dot @ delta_t
+        theta_t_plus_1 = theta_t + theta_t_dot @ delta_t
 
-        Q_t = np.array([[1.0,   0,   0],[  0, 1.0,   0],[  0,   0, 1.0]]) # state model noise covariance
+        x_t_plus_1_dot = x_t_dot 
+        y_t_plus_1_dot = y_t_dot
+        theta_t_plus_1_dot = theta_t_dot
 
-        H_t = np.array([[1.0,  0,   0],[  0,1.0,   0],[  0,  0, 1.0]]) #H martix used to convert the predicted state estimate at time t into predicted sensor measurements at time t
+        X_t = [x_t, y_t, theta_t, x_t_dot, y_t_dot, theta_t_dot]
 
-        R_t = np.array([[1.0,   0,    0],[  0, 1.0,    0],[  0,    0, 1.0]])  # Sensor covariance noise
-
-        B = np.array([  [np.cos(theta)*delta_t, 0],[np.sin(theta)*delta_t, 0],[0, delta_t]])
-
-        sensor_noise_w_t = np.array([0.07,0.07,0.04])
-
+        X_t_plus_1 = [x_t_plus_1, y_t_plus_1, theta_t_plus_1, x_t_plus_1_dot, y_t_plus_1_dot, theta_t_plus_1_dot] #not sure
 
         # State transition matrix A at timestep t-1
         
-        A_t_minus_1 = np.array([[1.0,  0,   0],[  0,1.0,   0],[  0,  0, 1.0]])
+
+        A_t = np.eye(6, dtype = float)
 
 
         # Covariance
         
-        P_t = A_t_minus_1 @ P_t_minus_1 @ A_t_minus_1.T + (Q_t)
+        P_t_plus_1 = A_t @ P_t @ A_t.T + self.Q
 
         # takes input as the delta time betweem previous state estiate and current estimate
+        X_t_plus_1 = A_t @ X_t.T    #not sure
+       
+        self.x = A_t @ X_t.T        
         
-        state_estimate_t = A_t_minus_1 @ (state_estimate_t_minus_1) + (B(state_estimate_t_minus_1[2],delta_t)) @ (control_vector_t_minus_1) 
-        
-        
-        # Outputs
-        
-        measurement_residual_y_t = z_t_observation_vector - ((H_t @ state_estimate_t) + (sensor_noise_w_t))
+        # Output
 
-        S_t = H_t @ P_t @ H_t.T + R_t # mesurement residual covariance 
 
-        K_t = P_t @ H_t.T @ np.linalg.pinv(S_t) # Kalman gain
 
         # Updates state(self.x)
-        state_estimate_t = state_estimate_t + (K_t @ measurement_residual_y_t)
+        
+       
 
         # To do
         # Implement constant velocity motion model to update state(self.x)
