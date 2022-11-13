@@ -31,7 +31,7 @@ class EKF():
 
         X_t = [x_t, y_t, theta_t, x_t_dot, y_t_dot, theta_t_dot]
 
-        X_t_plus_1 = [x_t_plus_1, y_t_plus_1, theta_t_plus_1, x_t_plus_1_dot, y_t_plus_1_dot, theta_t_plus_1_dot]
+        X_t_plus_1 = [x_t_plus_1, y_t_plus_1, theta_t_plus_1, x_t_plus_1_dot, y_t_plus_1_dot, theta_t_plus_1_dot]    #need to check
 
         # State transition matrix A at timestep t-1
         
@@ -44,7 +44,7 @@ class EKF():
         P_t_plus_1 = A_t @ P_t @ A_t.T + self.Q
 
         # takes input as the delta time betweem previous state estiate and current estimate
-        X_t_plus_1 = A_t @ X_t.T
+        X_t_plus_1 = A_t @ X_t.T  #need to check
        
         self.x = A_t @ X_t.T        
         
