@@ -31,7 +31,7 @@ class EKF():
 
         X_t = [x_t, y_t, theta_t, x_t_dot, y_t_dot, theta_t_dot]
 
-        X_t_plus_1 = [x_t_plus_1, y_t_plus_1, theta_t_plus_1, x_t_plus_1_dot, y_t_plus_1_dot, theta_t_plus_1_dot] #not sure
+        X_t_plus_1 = [x_t_plus_1, y_t_plus_1, theta_t_plus_1, x_t_plus_1_dot, y_t_plus_1_dot, theta_t_plus_1_dot]
 
         # State transition matrix A at timestep t-1
         
@@ -44,7 +44,7 @@ class EKF():
         P_t_plus_1 = A_t @ P_t @ A_t.T + self.Q
 
         # takes input as the delta time betweem previous state estiate and current estimate
-        X_t_plus_1 = A_t @ X_t.T    #not sure
+        X_t_plus_1 = A_t @ X_t.T
        
         self.x = A_t @ X_t.T        
         
@@ -64,7 +64,6 @@ class EKF():
 
 
         return 0
-
     
     def measurement_update_lidar(self,lidar_measurement):
         # Input:
@@ -73,25 +72,52 @@ class EKF():
 
         #Your code here
 
+       self.H = np.array[1.0,1.0,1.0,1.0,1.0,1.0] #6*6
+
+       y = lidar_measurement - np.dot(self.H, self.x) #line 27 for z lidar mesa
+
+       S_t = H_t @ P_t @ H_t.T + self.R_lidar # mesurement residual covariance r lidar
+
+       K_t = P_t @ H_t.T @ np.linalg.pinv(S_t) # Kalman gain
+
+       self.x = self.x + np.dot(K, y)
+
+       I = np.eye(6,6) #np.ones
+
+       self.P = np.dot(np.dot(I - np.dot(K, self.H), self.P), 
+        	   (I - np.dot(K, self.H)).T) + np.dot(np.dot(K, self.R_lidar), K.T)
+
         # Output
         # Updates the state variable (self.x)
 
         # To do :
         # # Write code for measurement update 
-
-        return 0
-
+       return 0
     def measurement_update_gps(self,gps_measurement):
         # Input:
         # GPS measurement is the noisy measurement of the vehicle's position  obtained from the simulator
         # GPS measurement is of the form [x,y,theta]
 
+       self.R_gps = np.eye((3,3),dtype=np.float)
+
+       y = gps_measurement - np.dot(self.H, self.x) #line use gps_measurement
+
+       S_t = H_t @ P_t @ H_t.T + R_gps # mesurement residual covariance r gps
+
+       K_t = P_t @ H_t.T @ np.linalg.pinv(S_t) # Kalman gain
+
+       self.x = self.x + np.dot(K, y)
+
+       I = np.eye(self.6) #np.ones for identity 
+
+       self.P = np.dot(np.dot(I - np.dot(K, self.H), self.P), 
+        	   (I - np.dot(K, self.H)).T) + np.dot(np.dot(K, self.R_gps), K.T)
+
+
+
         # Output
         # Updates the state variable (self.x)
 
         # To do :
         # # Write code for measurement update 
-
-        return 0
-
-
+       return 0
