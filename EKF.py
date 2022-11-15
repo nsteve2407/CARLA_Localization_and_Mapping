@@ -9,6 +9,7 @@ class EKF():
         self.Q = np.eye((6,6),dtype=np.float)
         self.R_lidar = np.eye((3,3),dtype=np.float)
         self.A = np.eye(6,dtype=np.float)
+        self.H = np.array[1.0,1.0,1.0,1.0,1.0,1.0] #6*6
 
 
     def predict(self,delta_t):      
@@ -29,18 +30,15 @@ class EKF():
         # Input:
         # Lidar measurement is the lidar position estimate obtained from Scan Matching
         # Lidar measurement is of the form [x,y,theta]
-
-        #Your code here
-
-       self.H = np.array[1.0,1.0,1.0,1.0,1.0,1.0] #6*6
+       
 
        y = lidar_measurement - np.dot(self.H, self.x) #line 27 for z lidar mesa
 
-       S_t = H_t @ P_t @ H_t.T + self.R_lidar # mesurement residual covariance r lidar
+       S_t = self.H @ self.P @ self.H.T + self.R_lidar # mesurement residual covariance r lidar
 
-       K_t = P_t @ H_t.T @ np.linalg.pinv(S_t) # Kalman gain
+       K_t = self.P @ self.H.T @ np.linalg.pinv(S_t) # Kalman gain
 
-       self.x = self.x + np.dot(K, y)
+       self.x = self.x + np.dot(K_t, y)
 
        I = np.eye(6,6) #np.ones
 
@@ -62,16 +60,15 @@ class EKF():
 
        y = gps_measurement - np.dot(self.H, self.x) #line use gps_measurement
 
-       S_t = H_t @ P_t @ H_t.T + R_gps # mesurement residual covariance r gps
+       S_t = self.H @ self.P @ self.H.T + R_gps # mesurement residual covariance r gps
 
-       K_t = P_t @ H_t.T @ np.linalg.pinv(S_t) # Kalman gain
+       K = self.P @ self.H.T @ np.linalg.pinv(S_t) # Kalman gain
 
        self.x = self.x + np.dot(K, y)
 
-       I = np.eye(self.6) #np.ones for identity 
+       I = np.eye(6) #np.ones for identity 
 
-       self.P = np.dot(np.dot(I - np.dot(K, self.H), self.P), 
-        	   (I - np.dot(K, self.H)).T) + np.dot(np.dot(K, self.R_gps), K.T)
+       self.P = np.dot(I - np.dot(K, self.H), self.P)
 
 
 
