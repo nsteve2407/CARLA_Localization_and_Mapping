@@ -8,60 +8,20 @@ class EKF():
         self.P = np.eye((6,6),dtype=np.float)
         self.Q = np.eye((6,6),dtype=np.float)
         self.R_lidar = np.eye((3,3),dtype=np.float)
+        self.A = np.eye(6,dtype=np.float)
 
 
-    def predict(self,delta_t): 
-
-        # Inputs
-        x_t = 0
-        x_t_dot = 0
-        y_t = 0
-        y_t_dot = 0
-        theta_t = 0
-        theta_t_dot = 0
-        P_t = 0
-
-        x_t_plus_1 = x_t + x_t_dot @ delta_t
-        y_t_plus_1 = y_t + y_t_dot @ delta_t
-        theta_t_plus_1 = theta_t + theta_t_dot @ delta_t
-
-        x_t_plus_1_dot = x_t_dot 
-        y_t_plus_1_dot = y_t_dot
-        theta_t_plus_1_dot = theta_t_dot
-
-        X_t = [x_t, y_t, theta_t, x_t_dot, y_t_dot, theta_t_dot]
-
-        X_t_plus_1 = [x_t_plus_1, y_t_plus_1, theta_t_plus_1, x_t_plus_1_dot, y_t_plus_1_dot, theta_t_plus_1_dot]    #need to check
-
-        # State transition matrix A at timestep t-1
-        
-
-        A_t = np.eye(6, dtype = float)
-
-
-        # Covariance
-        
-        P_t_plus_1 = A_t @ P_t @ A_t.T + self.Q
-
-        # takes input as the delta time betweem previous state estiate and current estimate
-        X_t_plus_1 = A_t @ X_t.T  #need to check
-       
-        self.x = A_t @ X_t.T        
-        
-        # Output
-
-
-
-        # Updates state(self.x)
-        
+    def predict(self,delta_t):      
        
 
         # To do
         # Implement constant velocity motion model to update state(self.x)
 
+        #Update self.A matrix (A[0,3]=delta_t,A[1,4]=delta_t,A[2,5]=delta_t)
 
-        # Define A matrix and use state transftion function
+        #Update state (self.x = A@x)
 
+        #Update self.P
 
         return 0
     
