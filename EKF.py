@@ -8,6 +8,7 @@ class EKF():
         self.P = np.eye((6,6),dtype=np.float)
         self.Q = np.eye((6,6),dtype=np.float)
         self.R_lidar = np.eye((3,3),dtype=np.float)
+        self.R_gps = np.eye((3,3),dtype=np.float)s
         self.A = np.eye(6,dtype=np.float)
         self.H = np.array[1.0,1.0,1.0,1.0,1.0,1.0] #6*6
 
@@ -36,31 +37,24 @@ class EKF():
 
        S_t = self.H @ self.P @ self.H.T + self.R_lidar # mesurement residual covariance r lidar
 
-       K_t = self.P @ self.H.T @ np.linalg.pinv(S_t) # Kalman gain
+       K = self.P @ self.H.T @ np.linalg.pinv(S_t) # Kalman gain
 
-       self.x = self.x + np.dot(K_t, y)
+       self.x = self.x + np.dot(K, y)
 
        I = np.eye(6,6) #np.ones
 
-       self.P = np.dot(np.dot(I - np.dot(K, self.H), self.P), 
-        	   (I - np.dot(K, self.H)).T) + np.dot(np.dot(K, self.R_lidar), K.T)
-
+       self.P = np.dot(I - np.dot(K, self.H), self.P)
         # Output
         # Updates the state variable (self.x)
-
-        # To do :
-        # # Write code for measurement update 
        return 0
     def measurement_update_gps(self,gps_measurement):
         # Input:
         # GPS measurement is the noisy measurement of the vehicle's position  obtained from the simulator
         # GPS measurement is of the form [x,y,theta]
 
-       self.R_gps = np.eye((3,3),dtype=np.float)
-
        y = gps_measurement - np.dot(self.H, self.x) #line use gps_measurement
 
-       S_t = self.H @ self.P @ self.H.T + R_gps # mesurement residual covariance r gps
+       S_t = self.H @ self.P @ self.H.T + self.R_gps # mesurement residual covariance r gps
 
        K = self.P @ self.H.T @ np.linalg.pinv(S_t) # Kalman gain
 
