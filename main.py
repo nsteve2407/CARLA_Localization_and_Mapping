@@ -25,6 +25,9 @@ import carla
 from EKF import EKF
 from scan_match import ScanMatch
 
+# Other
+import pandas as pd
+
 VIRIDIS = np.array(cm.get_cmap('plasma').colors)
 VID_RANGE = np.linspace(0.0, 1.0, VIRIDIS.shape[0])
 
@@ -78,6 +81,9 @@ def generate_lidar_bp(arg, world, blueprint_library, delta):
 def main(arg):
 # Main function to interact with simulator
     estimate = True # Run estimator
+    estimate_log = []
+    gt_log = []
+
     client = carla.Client(arg.host, arg.port)
     client.set_timeout(2.0)
     world = client.get_world()
@@ -132,21 +138,27 @@ def main(arg):
         dt0 = datetime.now()
         while True:
             if estimate:
+                tf = vehicle.get_transform()
+                location = tf.location
+                rotation = tf.rotation
                 # Predict
                 estimator.predict(delta) #delta set to 0.005 secs
 
                 #Update
                 # Use Lidar and gps on alternate frames
+
                 if frame%2==0:
                     # Use lidar
                     pose_scan_match = scan_match.scan_match_map(point_list,estimator.xp[:2])
                     estimator.measurement_update_lidar(pose_scan_match)
                 else:
                     #Use gps
-                    tf = vehicle.get_transform()
-                    location = tf.location
-                    rotation = tf.rotation
-                    estimator.measurement_update_gps([location.x,location.y,rotation.yaw])
+
+                    estimator.measurement_update_gps([location.x,location.y,rotation.yaw]) # Add white noise
+
+                # Log estimate and GT
+                estimate_log.append(estimator.x)
+                gt_log.append([location.x,location.y,rotation.yaw])
 
 
             # Update Visualizer
@@ -172,6 +184,8 @@ def main(arg):
         vehicle.destroy()
         lidar.destroy()
         vis.destroy_window()
+        df = pd.DataFrame([estimate_log,gt_log])
+        df.to_csv("./log.csv")
 
 
 if __name__ == "__main__":
