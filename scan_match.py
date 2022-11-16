@@ -1,5 +1,8 @@
 import open3d
 import pypcd
+import pcl
+import random
+import numpy as np
 
 class ScanMatch :
     def __init__(self):
@@ -14,8 +17,10 @@ class ScanMatch :
 
         # Output:
         # pose estimate in the form [x,y,theta]
-
-
+        cloud_in = pcl.PointCloud() #the pointcloud from the current time step
+        cloud_out = pcl.PointCloud()# Target: PointCloud from previous time step
+        icp = cloud_in.make_IterativeClosestPoint()
+        converged, transf, estimate, fitness = icp.icp(cloud_in, cloud_out)
         return 0
     
     def scan_match_map(self,source,initial_guess):
