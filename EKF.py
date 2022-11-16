@@ -13,9 +13,15 @@ class EKF():
         self.H = np.array[1.0,1.0,1.0,1.0,1.0,1.0] #6*6
 
 
-    def predict(self,delta_t):      
-       
+    def predict(self,delta_t):
+              
+        self.A[0,3]=delta_t
+        self.A[1,4]=delta_t
+        self.A[2,5]=delta_t
 
+        self.x = self.A @ self.x
+        
+        self.P = self.A @ self.P @ self.A.T + self.Q
         # To do
         # Implement constant velocity motion model to update state(self.x)
 
