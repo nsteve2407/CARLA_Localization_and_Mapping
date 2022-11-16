@@ -80,7 +80,7 @@ def generate_lidar_bp(arg, world, blueprint_library, delta):
 
 def main(arg):
 # Main function to interact with simulator
-    estimate = True # Run estimator
+    estimate = False # Run estimator
     estimate_log = []
     gt_log = []
 

@@ -4,13 +4,13 @@ import numpy as np
 
 class EKF():
     def __init__(self):
-        self.x = np.array[0.0,0.0,0.0,0.0,0.0,0.0] # 6D state vector [x,y,theta,x',y',theta']
-        self.P = np.eye((6,6),dtype=np.float)
-        self.Q = np.eye((6,6),dtype=np.float)
-        self.R_lidar = np.eye((3,3),dtype=np.float)
-        self.R_gps = np.eye((3,3),dtype=np.float)
+        self.x = np.array([0.0,0.0,0.0,0.0,0.0,0.0]) # 6D state vector [x,y,theta,x',y',theta']
+        self.P = np.eye(6,dtype=np.float)
+        self.Q = np.eye(6,dtype=np.float)
+        self.R_lidar = np.eye(3,dtype=np.float)
+        self.R_gps = np.eye(3,dtype=np.float)
         self.A = np.eye(6,dtype=np.float)
-        self.H = np.array[1.0,1.0,1.0,1.0,1.0,1.0] #6*6
+        self.H = np.array([1.0,1.0,1.0,1.0,1.0,1.0]) #6*6
 
 
     def predict(self,delta_t):
