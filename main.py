@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import glob
 import os
@@ -153,15 +153,17 @@ def main(arg):
                     location = tf.location
                     rotation = tf.rotation
                     # Predict
+                    prev_state = deepcopy(estimator.x)
                     estimator.predict(delta) #delta set to 0.005 secs
 
                     #Update
                     # Use Lidar and gps on alternate frames
 
-                    if frame%2==0:
+                    if frame%3==0:
                         # Use lidar
-                        pose_scan_match = scan_match.scan_match_prev_scan(pclCloud)
-                        estimator.measurement_update_lidar(pose_scan_match)
+                        delta_pose = scan_match.scan_match_prev_scan(pclCloud)
+                        estimator.measurement_update_lidar(prev_state[:3]+delta_pose)
+                        scan_match.prev_cloud = deepcopy(pclCloud)
                     else:
                         #Use gps
                         noise_x = np.random.normal(0,2,1)
