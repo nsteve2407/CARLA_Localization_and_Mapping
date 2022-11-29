@@ -10,6 +10,8 @@ import random
 import numpy as np
 from matplotlib import cm
 import open3d as o3d
+import pcl
+from copy import deepcopy
 
 try:
     sys.path.append(glob.glob('../carla/dist/carla-*%d.%d-%s.egg' % (
@@ -32,7 +34,7 @@ VIRIDIS = np.array(cm.get_cmap('plasma').colors)
 VID_RANGE = np.linspace(0.0, 1.0, VIRIDIS.shape[0])
 
 
-def lidar_sensor_callback(point_cloud, point_list):
+def lidar_sensor_callback(point_cloud, point_list,pclCloud):
     # Prepares the lidar data for Scan Matching
     # PCD for scan matching is stored into global variables
     data = np.copy(np.frombuffer(point_cloud.raw_data, dtype=np.dtype('f4')))
@@ -52,7 +54,7 @@ def lidar_sensor_callback(point_cloud, point_list):
     # We're negating the y to correclty visualize a world that matches
     # what we see in Unreal since Open3D uses a right-handed coordinate system
     points[:, :1] = -points[:, :1]
-
+    pclCloud.from_array(points)
     # # An example of converting points from sensor to vehicle space if we had
     # # a carla.Transform variable named "tran":
     # points = np.append(points, np.ones((points.shape[0], 1)), axis=1)
@@ -116,8 +118,9 @@ def main(arg):
         lidar = world.spawn_actor(lidar_bp, lidar_transform, attach_to=vehicle)
 
         point_list = o3d.geometry.PointCloud()
+        pclCloud = pcl.PointCloud()
 
-        lidar.listen(lambda data: lidar_sensor_callback(data, point_list))
+        lidar.listen(lambda data: lidar_sensor_callback(data, point_list,pclCloud))
 
         vis = o3d.visualization.Visualizer()
         vis.create_window(
@@ -138,27 +141,38 @@ def main(arg):
         dt0 = datetime.now()
         while True:
             if estimate:
-                tf = vehicle.get_transform()
-                location = tf.location
-                rotation = tf.rotation
-                # Predict
-                estimator.predict(delta) #delta set to 0.005 secs
-
-                #Update
-                # Use Lidar and gps on alternate frames
-
-                if frame%2==0:
-                    # Use lidar
-                    pose_scan_match = scan_match.scan_match_map(point_list,estimator.xp[:2])
-                    estimator.measurement_update_lidar(pose_scan_match)
+                if not estimator.initialized:
+                    tf = vehicle.get_transform()
+                    location = tf.location
+                    rotation = tf.rotation
+                    estimator.x = np.array([location.x,location.y,rotation.yaw,0.5,0.5,0.5])
+                    estimator.initialized = True
+                    scan_match.prev_cloud = pclCloud
                 else:
-                    #Use gps
+                    tf = vehicle.get_transform()
+                    location = tf.location
+                    rotation = tf.rotation
+                    # Predict
+                    estimator.predict(delta) #delta set to 0.005 secs
 
-                    estimator.measurement_update_gps([location.x,location.y,rotation.yaw]) # Add white noise
+                    #Update
+                    # Use Lidar and gps on alternate frames
 
-                # Log estimate and GT
-                estimate_log.append(estimator.x)
-                gt_log.append([location.x,location.y,rotation.yaw])
+                    if frame%2==0:
+                        # Use lidar
+                        pose_scan_match = scan_match.scan_match_prev_scan(pclCloud)
+                        estimator.measurement_update_lidar(pose_scan_match)
+                    else:
+                        #Use gps
+                        noise_x = np.random.normal(0,2,1)
+                        noise_y = np.random.normal(0,2,1)
+                        noise_theta = np.random.normal(0,0.3,1)
+
+                        estimator.measurement_update_gps([location.x+noise_x,location.y+noise_y,rotation.yaw+noise_theta]) # Add white noise
+
+                    # Log estimate and GT
+                    estimate_log.append(estimator.x)
+                    gt_log.append([location.x,location.y,rotation.yaw])
 
 
             # Update Visualizer
