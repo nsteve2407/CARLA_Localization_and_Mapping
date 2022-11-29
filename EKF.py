@@ -12,7 +12,7 @@ class EKF():
         self.A = np.eye(6,dtype=np.float)
         self.H = np.array([1.0,1.0,1.0,1.0,1.0,1.0]) #6*6
         self.q = 1.0
-
+        self.initialized  = False
 
     def predict(self,delta_t):
               
