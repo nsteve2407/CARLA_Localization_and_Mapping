@@ -4,13 +4,14 @@ import numpy as np
 
 class EKF():
     def __init__(self):
-        self.x = np.array([0.0,0.0,0.0,0.0,0.0,0.0]) # 6D state vector [x,y,theta,x',y',theta']
+        self.x = np.array([[0.0,0.0,0.0,0.0,0.0,0.0]]).T # 6D state vector [x,y,theta,x',y',theta']
+        # self.x = np.expand_dims(self.x,axis=-1)
         self.P = np.eye(6,dtype=np.float)
         self.Q = np.eye(6,dtype=np.float)
         self.R_lidar = np.eye(3,dtype=np.float)
         self.R_gps = np.eye(3,dtype=np.float)
         self.A = np.eye(6,dtype=np.float)
-        self.H = np.array([1.0,1.0,1.0,1.0,1.0,1.0]) #6*6
+        self.H = np.array([[1.0,0.0,0.0,0.0,0.0,0.0],[0.0,1.0,0.0,0.0,0.0,0.0],[0.0,0.0,1.0,0.0,0.0,0.0]]) #6*6
         self.q = 1.0
         self.initialized  = False
 
@@ -68,7 +69,7 @@ class EKF():
 
        y = gps_measurement - np.dot(self.H, self.x) #line use gps_measurement
 
-       S_t = (self.H @ self.P @ self.H.T) + self.R_gps # mesurement residual covariance r gps
+       S_t = ((self.H @ self.P) @ self.H.T) + self.R_gps # mesurement residual covariance r gps
 
        K = (self.P @ self.H.T) @ np.linalg.pinv(S_t) # Kalman gain
 

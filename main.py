@@ -12,6 +12,7 @@ from matplotlib import cm
 import open3d as o3d
 import pcl
 from copy import deepcopy
+import scipy.spatial as sp
 
 try:
     sys.path.append(glob.glob('../carla/dist/carla-*%d.%d-%s.egg' % (
@@ -54,7 +55,7 @@ def lidar_sensor_callback(point_cloud, point_list,pclCloud):
     # We're negating the y to correclty visualize a world that matches
     # what we see in Unreal since Open3D uses a right-handed coordinate system
     points[:, :1] = -points[:, :1]
-    pclCloud.from_array(points)
+    # pclCloud.from_array(points)
     # # An example of converting points from sensor to vehicle space if we had
     # # a carla.Transform variable named "tran":
     # points = np.append(points, np.ones((points.shape[0], 1)), axis=1)
@@ -82,13 +83,14 @@ def generate_lidar_bp(arg, world, blueprint_library, delta):
 
 def main(arg):
 # Main function to interact with simulator
-    estimate = False # Run estimator
+    estimate = True # Run estimator
     estimate_log = []
     gt_log = []
 
     client = carla.Client(arg.host, arg.port)
-    client.set_timeout(2.0)
+    client.set_timeout(100.0)
     world = client.get_world()
+    world = client.reload_world()
 
     try:
         # Initialize world, vehicle, lidar and Open3D visualizer
@@ -122,16 +124,16 @@ def main(arg):
 
         lidar.listen(lambda data: lidar_sensor_callback(data, point_list,pclCloud))
 
-        vis = o3d.visualization.Visualizer()
-        vis.create_window(
-            window_name='Carla Lidar',
-            width=960,
-            height=540,
-            left=480,
-            top=270)
-        vis.get_render_option().background_color = [0.05, 0.05, 0.05]
-        vis.get_render_option().point_size = 1
-        vis.get_render_option().show_coordinate_frame = True
+        # vis = o3d.visualization.Visualizer()
+        # vis.create_window(
+        #     window_name='Carla Lidar',
+        #     width=960,
+        #     height=540,
+        #     left=480,
+        #     top=270)
+        # vis.get_render_option().background_color = [0.05, 0.05, 0.05]
+        # vis.get_render_option().point_size = 1
+        # vis.get_render_option().show_coordinate_frame = True
 
         ## Initialize EKF and ScanMatch objects
         estimator = EKF()
@@ -141,15 +143,16 @@ def main(arg):
         dt0 = datetime.now()
         while True:
             if estimate:
-                if not estimator.initialized:
-                    tf = vehicle.get_transform()
+                if  np.asarray(scan_match.prev_cloud.points).size==0:
+                    tf = lidar.get_transform()
                     location = tf.location
                     rotation = tf.rotation
-                    estimator.x = np.array([location.x,location.y,rotation.yaw,0.5,0.5,0.5])
+                    estimator.x = np.array([[location.x,location.y,np.deg2rad(rotation.yaw),0.5,0.5,0.5]]).T
                     estimator.initialized = True
-                    scan_match.prev_cloud = pclCloud
+                    scan_match.prev_cloud = deepcopy(point_list)
+                    print("\nInitial State Initialized")
                 else:
-                    tf = vehicle.get_transform()
+                    tf = lidar.get_transform()
                     location = tf.location
                     rotation = tf.rotation
                     # Predict
@@ -159,31 +162,41 @@ def main(arg):
                     #Update
                     # Use Lidar and gps on alternate frames
 
-                    if frame%3==0:
-                        # Use lidar
-                        delta_pose = scan_match.scan_match_prev_scan(pclCloud)
-                        estimator.measurement_update_lidar(prev_state[:3]+delta_pose)
-                        scan_match.prev_cloud = deepcopy(pclCloud)
+                    if frame%3!=0:
+                        est_delta_pose = estimator.x - prev_state
+                        init_guess = np.eye(4,dtype=np.float32)
+                        init_guess[:3,:3] = sp.transform.Rotation.from_euler('z',est_delta_pose[2]).as_matrix()
+                        init_guess[0,3] = est_delta_pose[0]
+                        init_guess[1,3] = est_delta_pose[1]
+                        init_guess[2,3] = location.z
+                        delta_pose = scan_match.scan_match_prev_scan(point_list)
+                        lidar_gloal_pose = np.asarray([prev_state[0]+delta_pose[0,0]*np.cos(prev_state[2]),prev_state[1]+delta_pose[1,0]*np.sin(prev_state[2]),prev_state[2]+delta_pose[2,0]])
+                        estimator.measurement_update_lidar(lidar_gloal_pose)
+                        scan_match.prev_cloud = deepcopy(point_list)
                     else:
                         #Use gps
                         noise_x = np.random.normal(0,2,1)
                         noise_y = np.random.normal(0,2,1)
                         noise_theta = np.random.normal(0,0.3,1)
 
-                        estimator.measurement_update_gps([location.x+noise_x,location.y+noise_y,rotation.yaw+noise_theta]) # Add white noise
+                        estimator.measurement_update_gps(np.array([location.x+noise_x,location.y+noise_y,np.deg2rad(rotation.yaw)+noise_theta])) # Add white noise
 
+                    print("\nState estimate:")
+                    print("\nx:{} , y:{} ,theta:{}".format(estimator.x[0],estimator.x[1],estimator.x[2]))
+                    print("\nGround Truth:")
+                    print("\nx:{} , y:{} ,theta:{}".format(location.x,location.y,np.deg2rad(rotation.yaw)))
                     # Log estimate and GT
-                    estimate_log.append(estimator.x)
-                    gt_log.append([location.x,location.y,rotation.yaw])
+                    estimate_log.append(estimator.x.T.tolist()[0]+[location.x,location.y,np.deg2rad(rotation.yaw)])
+                    # gt_log.append([location.x,location.y,rotation.yaw])
 
 
             # Update Visualizer
-            if frame == 2:
-                vis.add_geometry(point_list)
-            vis.update_geometry(point_list)
+            # if frame == 2:
+            #     vis.add_geometry(point_list)
+            # vis.update_geometry(point_list)
 
-            vis.poll_events()
-            vis.update_renderer()
+            # vis.poll_events()
+            # vis.update_renderer()
             time.sleep(0.005)
             world.tick()
 
@@ -192,6 +205,8 @@ def main(arg):
             sys.stdout.flush()
             dt0 = datetime.now()
             frame += 1
+            if frame>100:
+                break
 
     finally:
         world.apply_settings(original_settings)
@@ -199,8 +214,8 @@ def main(arg):
 
         vehicle.destroy()
         lidar.destroy()
-        vis.destroy_window()
-        df = pd.DataFrame([estimate_log,gt_log])
+        # vis.destroy_window()
+        df = pd.DataFrame(estimate_log,columns=['x_e','y_e','th_e','xd_e','yd_e','thd_e','x_gt','y_gt','th_gt'])
         df.to_csv("./log.csv")
 
 
