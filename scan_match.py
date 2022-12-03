@@ -60,12 +60,12 @@ class ScanMatch :
         # trans_init =     trans_init = np.asarray([[0.0, 0.0, 1.0, 0.0], [1.0, 0.0, 0.0, 0.0],
         #                      [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 0.0, 1.0]])
         # source.transform(trans_init)
-        source_down, source_fpfh = self.preprocess_point_cloud(source,2.0)
-        target_down,targer_fpfh = self.preprocess_point_cloud(self.prev_cloud,2.0)
+        source_down, source_fpfh = self.preprocess_point_cloud(source,3.0)
+        target_down,targer_fpfh = self.preprocess_point_cloud(self.prev_cloud,3.0)
 
         result_ransac = self.execute_global_registration(source_down,target_down,source_fpfh,targer_fpfh,1.0)
 
-        reg = self.refine_registration(source,self.prev_cloud,0.5,result_ransac)
+        reg = self.refine_registration(source,self.prev_cloud,1.5,result_ransac)
 
         # reg = o3d.pipelines.registration.registration_icp(source,self.prev_cloud,0.02,init_guess,o3d.pipelines.registration.TransformationEstimationPointToPoint())
         angles  = sp.transform.Rotation.from_matrix(copy.copy(reg.transformation[:3,:3])).as_euler('zxy')

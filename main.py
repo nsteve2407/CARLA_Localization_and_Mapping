@@ -124,16 +124,16 @@ def main(arg):
 
         lidar.listen(lambda data: lidar_sensor_callback(data, point_list,pclCloud))
 
-        # vis = o3d.visualization.Visualizer()
-        # vis.create_window(
-        #     window_name='Carla Lidar',
-        #     width=960,
-        #     height=540,
-        #     left=480,
-        #     top=270)
-        # vis.get_render_option().background_color = [0.05, 0.05, 0.05]
-        # vis.get_render_option().point_size = 1
-        # vis.get_render_option().show_coordinate_frame = True
+        vis = o3d.visualization.Visualizer()
+        vis.create_window(
+            window_name='Carla Lidar',
+            width=960,
+            height=540,
+            left=480,
+            top=270)
+        vis.get_render_option().background_color = [0.05, 0.05, 0.05]
+        vis.get_render_option().point_size = 1
+        vis.get_render_option().show_coordinate_frame = True
 
         ## Initialize EKF and ScanMatch objects
         estimator = EKF()
@@ -162,7 +162,7 @@ def main(arg):
                     #Update
                     # Use Lidar and gps on alternate frames
 
-                    if frame%3!=0:
+                    if frame%5==0:
                         est_delta_pose = estimator.x - prev_state
                         init_guess = np.eye(4,dtype=np.float32)
                         init_guess[:3,:3] = sp.transform.Rotation.from_euler('z',est_delta_pose[2]).as_matrix()
@@ -180,7 +180,8 @@ def main(arg):
                         noise_theta = np.random.normal(0,0.3,1)
 
                         estimator.measurement_update_gps(np.array([location.x+noise_x,location.y+noise_y,np.deg2rad(rotation.yaw)+noise_theta])) # Add white noise
-
+                        scan_match.prev_cloud = deepcopy(point_list)
+                    
                     print("\nState estimate:")
                     print("\nx:{} , y:{} ,theta:{}".format(estimator.x[0],estimator.x[1],estimator.x[2]))
                     print("\nGround Truth:")
@@ -191,13 +192,13 @@ def main(arg):
 
 
             # Update Visualizer
-            # if frame == 2:
-            #     vis.add_geometry(point_list)
-            # vis.update_geometry(point_list)
+            if frame == 2:
+                vis.add_geometry(point_list)
+            vis.update_geometry(point_list)
 
-            # vis.poll_events()
-            # vis.update_renderer()
-            time.sleep(0.005)
+            vis.poll_events()
+            vis.update_renderer()
+            time.sleep(0.02)
             world.tick()
 
             process_time = datetime.now() - dt0
@@ -205,7 +206,7 @@ def main(arg):
             sys.stdout.flush()
             dt0 = datetime.now()
             frame += 1
-            if frame>100:
+            if frame>500:
                 break
 
     finally:

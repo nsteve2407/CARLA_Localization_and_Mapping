@@ -8,8 +8,9 @@ class EKF():
         # self.x = np.expand_dims(self.x,axis=-1)
         self.P = np.eye(6,dtype=np.float)
         self.Q = np.eye(6,dtype=np.float)
-        self.R_lidar = np.eye(3,dtype=np.float)
-        self.R_gps = np.eye(3,dtype=np.float)
+        self.R_lidar = np.eye(3,dtype=np.float)*0.5
+        self.R_gps = np.eye(3,dtype=np.float)*2.0
+        self.R_gps[2,2] = 0.3
         self.A = np.eye(6,dtype=np.float)
         self.H = np.array([[1.0,0.0,0.0,0.0,0.0,0.0],[0.0,1.0,0.0,0.0,0.0,0.0],[0.0,0.0,1.0,0.0,0.0,0.0]]) #6*6
         self.q = 1.0
