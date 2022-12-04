@@ -13,6 +13,7 @@ import open3d as o3d
 import pcl
 from copy import deepcopy
 import scipy.spatial as sp
+import  matplotlib.pyplot as plt
 
 try:
     sys.path.append(glob.glob('../carla/dist/carla-*%d.%d-%s.egg' % (
@@ -84,6 +85,7 @@ def generate_lidar_bp(arg, world, blueprint_library, delta):
 def main(arg):
 # Main function to interact with simulator
     estimate = True # Run estimator
+    viz = False
     estimate_log = []
     gt_log = []
 
@@ -123,17 +125,31 @@ def main(arg):
         pclCloud = pcl.PointCloud()
 
         lidar.listen(lambda data: lidar_sensor_callback(data, point_list,pclCloud))
-
-        vis = o3d.visualization.Visualizer()
-        vis.create_window(
-            window_name='Carla Lidar',
-            width=960,
-            height=540,
-            left=480,
-            top=270)
-        vis.get_render_option().background_color = [0.05, 0.05, 0.05]
-        vis.get_render_option().point_size = 1
-        vis.get_render_option().show_coordinate_frame = True
+        if viz:
+            vis = o3d.visualization.Visualizer()
+            vis.create_window(
+                window_name='Carla Lidar',
+                width=960,
+                height=540,
+                left=480,
+                top=270)
+            vis.get_render_option().background_color = [0.05, 0.05, 0.05]
+            vis.get_render_option().point_size = 1
+            vis.get_render_option().show_coordinate_frame = True
+            fig = plt.figure(figsize=(12,9))
+            plt.subplot(141)
+            plt.ylabel('Position X')
+            plt.xlabel('Frame #')
+            plt.subplot(142)
+            plt.ylabel('Position Y')
+            plt.xlabel('Frame #')
+            plt.subplot(143)
+            plt.ylabel('Theta')
+            plt.xlabel('Frame #')
+            plt.subplot(144)
+            plt.ylabel('Y')
+            plt.xlabel('X')
+            plt.pause(0.05)
 
         ## Initialize EKF and ScanMatch objects
         estimator = EKF()
@@ -181,23 +197,41 @@ def main(arg):
 
                         estimator.measurement_update_gps(np.array([location.x+noise_x,location.y+noise_y,np.deg2rad(rotation.yaw)+noise_theta])) # Add white noise
                         scan_match.prev_cloud = deepcopy(point_list)
-                    
-                    print("\nState estimate:")
-                    print("\nx:{} , y:{} ,theta:{}".format(estimator.x[0],estimator.x[1],estimator.x[2]))
-                    print("\nGround Truth:")
-                    print("\nx:{} , y:{} ,theta:{}".format(location.x,location.y,np.deg2rad(rotation.yaw)))
+                    if viz:
+                        plt.subplot(141)
+                        # plt.ylim(location.x-15,location.x+15)
+                        plt.scatter(frame,estimator.x[0],c='b')
+                        plt.scatter(frame,location.x,c='r')
+                        plt.subplot(142)
+                        # plt.ylim(location.y-15,location.y+15)
+                        plt.scatter(frame,estimator.x[1],c='b')
+                        plt.scatter(frame,location.y,c='r')
+                        plt.subplot(143)
+                        # plt.ylim(np.deg2rad(rotation.yaw)-0.25,np.deg2rad(rotation.yaw)+0.25)
+                        plt.scatter(frame,estimator.x[2],c='b')
+                        plt.scatter(frame,np.deg2rad(rotation.yaw),c='r')
+                        plt.pause(0.05)
+                        plt.subplot(144)
+                        plt.scatter(estimator.x[0],estimator.x[1],c='b')
+                        plt.scatter(location.x,location.y,c='r')
+                        plt.pause(0.08)
+                        # print("\nState estimate:")
+                        # print("\nx:{} , y:{} ,theta:{}".format(estimator.x[0],estimator.x[1],estimator.x[2]))
+                        # print("\nGround Truth:")
+                        # print("\nx:{} , y:{} ,theta:{}".format(location.x,location.y,np.deg2rad(rotation.yaw)))
                     # Log estimate and GT
                     estimate_log.append(estimator.x.T.tolist()[0]+[location.x,location.y,np.deg2rad(rotation.yaw)])
                     # gt_log.append([location.x,location.y,rotation.yaw])
 
 
             # Update Visualizer
-            if frame == 2:
-                vis.add_geometry(point_list)
-            vis.update_geometry(point_list)
+            if viz:
+                if frame == 2:
+                    vis.add_geometry(point_list)
+                vis.update_geometry(point_list)
 
-            vis.poll_events()
-            vis.update_renderer()
+                vis.poll_events()
+                vis.update_renderer()
             time.sleep(0.02)
             world.tick()
 
@@ -206,7 +240,10 @@ def main(arg):
             sys.stdout.flush()
             dt0 = datetime.now()
             frame += 1
-            if frame>500:
+            if frame%200==0:
+                df = pd.DataFrame(estimate_log,columns=['x_e','y_e','th_e','xd_e','yd_e','thd_e','x_gt','y_gt','th_gt'])
+                df.to_csv("./log3.csv")
+            if frame>3000:
                 break
 
     finally:
@@ -217,7 +254,7 @@ def main(arg):
         lidar.destroy()
         # vis.destroy_window()
         df = pd.DataFrame(estimate_log,columns=['x_e','y_e','th_e','xd_e','yd_e','thd_e','x_gt','y_gt','th_gt'])
-        df.to_csv("./log.csv")
+        df.to_csv("./log4.csv")
 
 
 if __name__ == "__main__":
