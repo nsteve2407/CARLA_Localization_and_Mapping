@@ -3,7 +3,7 @@ Fusion of LiDAR and GPS data for 2 dimesnional pose estimation using a Kalman Fi
 
 
 
-State is defined as $X ={x,y,\theta,x^\prime,y^\prime,\theta^\prime}$
+State is defined as,  $X ={x,y,\theta,x^\prime,y^\prime,\theta^\prime}$
 
 ### 
 ![fusion](https://github.com/nsteve2407/CARLA_Localization_and_Mapping/blob/main/carla_demo.gif)  
