@@ -1,7 +1,8 @@
 # CARLA_Localization_and_Mapping
 Fusion of LiDAR and GPS data for 2 dimesnional pose estimation using a Kalman Filter.
 
-###State
+
+
 State is defined as $X ={x,y,\theta,x^\prime,y^\prime,\theta^\prime}$
 
 ### 
